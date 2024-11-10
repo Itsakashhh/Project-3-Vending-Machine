@@ -16,7 +16,7 @@ contract VendingMachine {
     address public owner;
 
     // Event to log purchases
-    event Purchase(address indexed buyer, uint256 itemId, uint256 amount);
+    event Purchase(address indexed buyer, uint256 itemId, uint256 amount, uint256 quantity);
 
     // Modifier to restrict access to owner
     modifier onlyOwner() {
@@ -39,26 +39,25 @@ contract VendingMachine {
         items[itemId].quantity += quantity;
     }
 
-
     // Function to buy an item
-    function buyItem(uint256 itemId) public payable {
+    function buyItem(uint256 itemId, uint256 quantity) public payable {
         Item storage item = items[itemId];
 
-        // Check if the item exists and is in stock
-        require(item.quantity > 0, "Item out of stock");
-        require(msg.value >= item.price, "Insufficient payment");
+        // Check if the item exists, is in stock, and the user sent enough Ether
+        require(item.quantity >= quantity, "Not enough stock for the requested quantity");
+        uint256 totalPrice = item.price * quantity;
+        require(msg.value >= totalPrice, "Insufficient payment");
 
-        // Decrease the quantity and process the purchase
-        item.quantity--;
-        
-        // Emit a purchase event
-        emit Purchase(msg.sender, itemId, msg.value);
+        // Update quantity and emit event
+        item.quantity -= quantity;
+        emit Purchase(msg.sender, itemId, quantity, totalPrice);
 
         // Refund any excess Ether sent
-        if (msg.value > item.price) {
-            payable(msg.sender).transfer(msg.value - item.price);
+        if (msg.value > totalPrice) {
+            payable(msg.sender).transfer(msg.value - totalPrice);
         }
     }
+
 
     // Function for the owner to withdraw funds
     function withdrawFunds() public onlyOwner {
@@ -127,6 +126,9 @@ contract VendingMachine {
     }
 
 }
+
+
+
 
 
 
